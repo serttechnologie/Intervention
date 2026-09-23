@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rapport d'intervention</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f7fb;color:#172033}.wrap{max-width:900px;margin:auto;padding:40px 20px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}.top h1{margin:0;font-size:28px}.btn{border:0;border-radius:10px;padding:13px 18px;font-weight:700;cursor:pointer}.primary{background:#2563eb;color:#fff}.secondary{background:#e2e8f0;color:#172033}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:24px;box-shadow:0 4px 16px #0000000a}.form{display:grid;gap:18px}.field label{display:block;font-weight:700;margin-bottom:7px}.field input,.field textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font:inherit}.field textarea{min-height:100px;resize:vertical}.actions-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.action{border:1px solid #dbe2ea;border-radius:10px;padding:12px;background:#f8fafc}.action input{margin-right:8px}.buttons{display:flex;gap:10px;flex-wrap:wrap}.hidden{display:none}.empty{text-align:center;color:#64748b;padding:35px}.history{margin-top:22px}.item{padding:14px 0;border-bottom:1px solid #e5e7eb}.item strong{display:block;margin-bottom:6px}.muted{color:#64748b;font-size:14px}@media(max-width:650px){.wrap{padding:20px 14px}.top{align-items:flex-start;gap:15px;flex-direction:column}.actions-list{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>🔧 Rapport d'intervention</h1><div class="muted">Application simple de dépannage informatique</div></div>
+    <button class="btn primary" onclick="openForm()">+ Nouvelle intervention</button>
+  </div>
+
+  <div id="formCard" class="card hidden">
+    <form class="form" onsubmit="saveIntervention(event)">
+      <div class="field"><label>Client</label><input id="client" required placeholder="Nom du client ou entreprise"></div>
+      <div class="field"><label>Date</label><input id="date" type="date" required></div>
+
+      <div class="field">
+        <label>Actions menées</label>
+        <div class="actions-list">
+          <label class="action"><input type="checkbox" value="Diagnostic du poste"> Diagnostic du poste</label>
+          <label class="action"><input type="checkbox" value="Test matériel"> Test matériel</label>
+          <label class="action"><input type="checkbox" value="Nettoyage du système"> Nettoyage du système</label>
+          <label class="action"><input type="checkbox" value="Installation Windows"> Installation Windows</label>
+          <label class="action"><input type="checkbox" value="Installation des pilotes"> Installation des pilotes</label>
+          <label class="action"><input type="checkbox" value="Installation de logiciels"> Installation de logiciels</label>
+          <label class="action"><input type="checkbox" value="Configuration réseau"> Configuration réseau</label>
+          <label class="action"><input type="checkbox" value="Configuration imprimante"> Configuration imprimante</label>
+          <label class="action"><input type="checkbox" value="Suppression de virus"> Suppression de virus</label>
+          <label class="action"><input type="checkbox" value="Sauvegarde des données"> Sauvegarde des données</label>
+          <label class="action"><input type="checkbox" value="Remplacement de matériel"> Remplacement de matériel</label>
+          <label class="action"><input type="checkbox" value="Mise à jour du système"> Mise à jour du système</label>
+        </div>
+      </div>
+
+      <div class="field"><label>Autres actions / compte rendu</label><textarea id="notes" placeholder="Décrire ici les actions complémentaires..."></textarea></div>
+      <div class="field"><label>Résultat</label><textarea id="result" placeholder="Ex. Intervention terminée avec succès, tests OK."></textarea></div>
+
+      <div class="buttons">
+        <button class="btn primary" type="submit">Enregistrer</button>
+        <button class="btn secondary" type="button" onclick="generateCurrentPDF()">Générer le PDF</button>
+        <button class="btn secondary" type="button" onclick="closeForm()">Annuler</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card history">
+    <h2>Interventions</h2>
+    <div id="list"></div>
+  </div>
+</div>
+<script>
+const KEY='depannage_simple_v1';
+let interventions=JSON.parse(localStorage.getItem(KEY)||'[]');
+let current=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(interventions));render()}
+function openForm(data=null){current=data;document.getElementById('formCard').classList.remove('hidden');document.getElementById('client').value=data?.client||'';document.getElementById('date').value=data?.date||new Date().toISOString().slice(0,10);document.getElementById('notes').value=data?.notes||'';document.getElementById('result').value=data?.result||'';document.querySelectorAll('.action input').forEach(c=>c.checked=(data?.actions||[]).includes(c.value));window.scrollTo({top:0,behavior:'smooth'})}
+function closeForm(){document.getElementById('formCard').classList.add('hidden');current=null}
+function saveIntervention(e){e.preventDefault();const actions=[...document.querySelectorAll('.action input:checked')].map(x=>x.value);const extra=document.getElementById('notes').value.trim();const obj={id:current?.id||Date.now(),number:current?.number||'INT-'+String(interventions.length+1).padStart(4,'0'),client:document.getElementById('client').value.trim(),date:document.getElementById('date').value,actions,notes:extra,result:document.getElementById('result').value.trim()};if(current)interventions=interventions.map(x=>x.id===current.id?obj:x);else interventions.unshift(obj);save();current=obj;alert('Intervention enregistrée.');}
+function render(){const el=document.getElementById('list');if(!interventions.length){el.innerHTML='<div class="empty">Aucune intervention.<br>Cliquez sur « Nouvelle intervention » pour commencer.</div>';return}el.innerHTML=interventions.map(x=>`<div class="item"><strong>${esc(x.number)} — ${esc(x.client)}</strong><div class="muted">${esc(x.date)} · ${(x.actions||[]).length} action(s)</div><div style="margin-top:8px">${(x.actions||[]).map(a=>`<span style="display:inline-block;background:#eef2ff;padding:5px 8px;border-radius:7px;margin:3px;font-size:13px">${esc(a)}</span>`).join('')}</div><div class="buttons" style="margin-top:10px"><button class="btn secondary" onclick="openForm(interventions.find(i=>i.id===${x.id}))">Modifier</button><button class="btn primary" onclick="printPDF(interventions.find(i=>i.id===${x.id}))">Générer PDF</button></div></div>`).join('')}
+function generateCurrentPDF(){if(!current){alert('Enregistrez d’abord l’intervention.');return}printPDF(current)}
+function printPDF(x){const actions=(x.actions||[]).map(a=>`<li>${esc(a)}</li>`).join('');const extra=x.notes?`<p>${esc(x.notes).replace(/\n/g,'<br>')}</p>`:'';const w=window.open('','_blank');w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(x.number)}</title><style>body{font-family:Arial;margin:45px;color:#222}h1{color:#2563eb;margin-bottom:5px}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:7px}.box{padding:14px;background:#f5f7fb;border-radius:8px}li{margin:8px 0}footer{margin-top:60px;border-top:1px solid #ddd;padding-top:15px;color:#666;font-size:12px}@media print{body{margin:20px}}</style></head><body><h1>Rapport d'intervention</h1><p><b>N° :</b> ${esc(x.number)}<br><b>Client :</b> ${esc(x.client)}<br><b>Date :</b> ${esc(x.date)}</p><h2>Actions menées</h2><div class="box"><ul>${actions||'<li>Aucune action sélectionnée</li>'}</ul>${extra}</div><h2>Résultat</h2><div class="box">${esc(x.result).replace(/\n/g,'<br>')||'Non renseigné'}</div><h2>Signature client</h2><p style="margin-top:50px">Signature : __________________________________________</p><footer>Document généré automatiquement.</footer><script>window.print()<\/script></body></html>`);w.document.close()}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+render();
+</script>
+</body>
+</html>
